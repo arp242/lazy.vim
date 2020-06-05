@@ -4,8 +4,40 @@ if exists('g:loaded_lazy')
 endif
 let g:loaded_lazy = 1
 
+fun! lazy#list() abort
+	let snips = get(g:, 'lazy_snippets', '')
+	if snips is# '' || len(snips) is 0
+		return
+	endif
+	for ft in split(&ft, '\.')
+		let snips = get(g:lazy_snippets, ft, '')
+		if snips isnot ''
+			break
+		endif
+	endfor
+	if snips is# '' || len(snips) is 0
+		return
+	endif
+
+	for [k, v] in items(snips)
+		if type(v) is v:t_list
+			let v = join(v, "\n")
+		endif
+		let v = substitute(v, "\n", '', 'g')
+		let v = substitute(v, "\t", ' ', 'g')
+		let v = substitute(v, "\x08", '', 'g')
+		let v = substitute(v, " \+", ' ', 'g')
+
+		let w = &columns - 15
+		if len(v) > w
+			let v = v[:w] .. '…'
+		endif
+		echo printf('%-10s %s', k, v)
+	endfor
+endfun
+
 " Insert text based on <cword>
-fun! lazy#insert_cword()
+fun! lazy#insert_cword() abort
 	let snips = get(g:, 'lazy_snippets', '')
 	if snips is# '' || len(snips) is 0
 		return s:error('no snippets defined (g:lazy_snippets is undefined or empty)')
@@ -31,7 +63,7 @@ fun! lazy#insert_cword()
 endfun
 
 " Insert the text from snip.
-fun! lazy#insert_text(snip)
+fun! lazy#insert_text(snip) abort
 	let snip = a:snip
 	if type(a:snip) isnot v:t_list
 		let snip = split(a:snip, "\n")
@@ -66,7 +98,7 @@ fun! lazy#insert_text(snip)
 endfun
 
 " TODO: this doesn't display from insert mode.
-fun! s:error(msg, ...)
+fun! s:error(msg, ...) abort
     let msg = a:msg
     if len(a:000) > 0
       let msg = call('printf', [a:msg] + a:000)

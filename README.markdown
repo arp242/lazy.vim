@@ -21,11 +21,13 @@ Now press `<C-s>` in normal or insert mode to find a snippet based on the
 	nmap <C-t> <Plug>(lazy-insert-cword)
 	imap <C-t> <Plug>(lazy-insert-cword)
 
+you can use the `:Lazy` command to list snippets for the current filetype.
+
 Note: many terminals eat `<C-s>` and will stop the terminal output (`<C-q>` to
 resume); you probably want to disable this in your shell config `setopt
 noflowcontrol` in zsh; or `stty -ixon quit undef`).
 
-Note2: you need a fairly new Vim for this plugin to work, as I'm too lazy to
+Note 2: you need a fairly new Vim for this plugin to work, as I'm too lazy to
 make it more compatible 😅
 
 Alternatives:

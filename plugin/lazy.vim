@@ -7,3 +7,5 @@ endif
 if !mapcheck('<C-s>', 'i') && !hasmapto('<Plug>(lazy-insert-cword)', 'i')
 	imap <C-s> <Plug>(lazy-insert-cword)
 endif
+
+command! Lazy call lazy#list()
