@@ -89,7 +89,7 @@ fun! lazy#insert_text(snip) abort
 	for line in snip
 		let c = stridx(line, "\b")
 		if c > -1
-			exe printf('normal! %dl', c)
+			exe printf('normal! %dl', c - 1)
 			call setline('.', substitute(getline('.'), "\b", '', 'g'))
 			break
 		endif
