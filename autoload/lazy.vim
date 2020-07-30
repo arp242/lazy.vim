@@ -49,7 +49,7 @@ fun! lazy#insert_cword(from_insert) abort
 		endif
 		return
 	endtry
-	if snip
+	if snip isnot# ''
 		return lazy#insert_text(snip)
 	endif
 
