@@ -21,7 +21,8 @@ Now press `<C-s>` in normal or insert mode to find a snippet based on the
 	nmap <C-t> <Plug>(lazy-insert-cword)
 	imap <C-t> <Plug>(lazy-insert-cword)
 
-you can use the `:Lazy` command to list snippets for the current filetype.
+A popup will be shown if nothing matches. You can also use the `:Lazy` command
+to list snippets for the current filetype.
 
 Note: many terminals eat `<C-s>` and will stop the terminal output (`<C-q>` to
 resume); you probably want to disable this in your shell config (`setopt

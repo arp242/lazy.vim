@@ -4,13 +4,14 @@ if exists('g:loaded_lazy')
 endif
 let g:loaded_lazy = 1
 
-fun! lazy#list() abort
-	let snips = get(g:, 'lazy_snippets', '')
+" List all snippets; if echo is 1 it's printed, or it's returned if it's 0.
+fun! lazy#list(echo) abort
+	let snips = copy(get(g:, 'lazy_snippets', ''))
 	if snips is# '' || len(snips) is 0
 		return
 	endif
 	for ft in split(&ft, '\.')
-		let snips = get(g:lazy_snippets, ft, '')
+		let snips = copy(get(g:lazy_snippets, ft, ''))
 		if snips isnot ''
 			break
 		endif
@@ -28,38 +29,50 @@ fun! lazy#list() abort
 		let v = substitute(v, "\x08", '', 'g')
 		let v = substitute(v, " \+", ' ', 'g')
 
-		let w = &columns - 15
-		if len(v) > w
-			let v = v[:w] .. '…'
+		if a:echo
+			echo printf('%-10s %s', k, s:left(v, &columns - 15))
+		else
+			let snips[k] = v
 		endif
-		echo printf('%-10s %s', k, v)
 	endfor
+	return snips
 endfun
 
 " Insert text based on <cword>
 fun! lazy#insert_cword() abort
-	let snips = get(g:, 'lazy_snippets', '')
-	if snips is# '' || len(snips) is 0
-		return s:error('no snippets defined (g:lazy_snippets is undefined or empty)')
+	let snip = s:find_snip(expand('<cword>'))
+	if snip isnot# ''
+		call lazy#insert_text(snip)
 	endif
-	for ft in split(&ft, '\.')
-		let snips = get(g:lazy_snippets, ft, '')
-		if snips isnot ''
-			break
-		endif
+
+	" Show list if there's no matches.
+	" TODO: better filtering.
+	let snips = lazy#list(0)
+	let list = []
+	for [k, v] in items(snips)
+		call add(list, printf('%-10s %s', k, s:left(v, &columns - 25)))
 	endfor
-	if snips is# '' || len(snips) is 0
-		return s:error('no snippets for this filetype (g:lazy_snippets[%s] is undefined or empty)', &ft)
-	endif
 
-	let word = expand('<cword>')
-	let snip = get(snips, word, '')
-	if snip is# ''
-		" TODO: show popup menu with options.
-		return s:error('no snippet for "%s"', word)
-	endif
+	" TODO: add setting to override the menu; can override anything except
+	" callback.
+	call popup_menu(list, #{
+		\ callback:        {id, result -> s:popup_cb(list, id, result)},
+		\ cursorline:      1,
+		\ pos:             'topleft',
+		\ line:            'cursor+1',
+		\ col:             'cursor',
+		\ title:           '─ lazy.vim',
+		\ padding:         [0, 1, 0, 1],
+		\ border:          [],
+		\ borderchars:     ['─', '│', '─', '│', '┌', '┐', '┘', '└'],
+		\ })
+	return
+endfun
 
-	call lazy#insert_text(snip)
+fun! s:popup_cb(list, id, result) abort
+	let snip = split(a:list[a:result - 1], ' ')[0]
+	let text = s:find_snip(snip)
+	call lazy#insert_text(text)
 endfun
 
 " Insert the text from snip.
@@ -85,16 +98,33 @@ fun! lazy#insert_text(snip) abort
 		call append('.', snip[1:])
 	endif
 
-	" Set cursor position to \b, or the end of the snippet if there is no \b.
+	" Set cursor position to \b.
 	for line in snip
 		let c = stridx(line, "\b")
 		if c > -1
-			exe printf('normal! %dl', c - 1)
-			call setline('.', substitute(getline('.'), "\b", '', 'g'))
+			exe "normal! f\b\"_x"
 			break
 		endif
-		normal! j
 	endfor
+endfun
+
+" Find snippet text by shortcut.
+fun! s:find_snip(word) abort
+	let snips = copy(get(g:, 'lazy_snippets', ''))
+	if snips is# '' || len(snips) is 0
+		return s:error('no snippets defined (g:lazy_snippets is undefined or empty)')
+	endif
+	for ft in split(&ft, '\.')
+		let snips = copy(get(g:lazy_snippets, ft, ''))
+		if snips isnot ''
+			break
+		endif
+	endfor
+	if snips is# '' || len(snips) is 0
+		return s:error('no snippets for this filetype (g:lazy_snippets[%s] is undefined or empty)', &ft)
+	endif
+
+	return get(snips, a:word, '')
 endfun
 
 " TODO: this doesn't display from insert mode.
@@ -107,4 +137,12 @@ fun! s:error(msg, ...) abort
 	echohl Error
 	echom 'lazy.vim: ' .. msg
 	echohl None
+endfun
+
+fun! s:left(str, maxlen) abort
+	let l:str = a:str
+	if len(a:str) > a:maxlen
+		let l:str = l:str[:a:maxlen] .. '…'
+	endif
+	return l:str
 endfun
