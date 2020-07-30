@@ -24,9 +24,8 @@ fun! lazy#list(echo) abort
 		if type(v) is v:t_list
 			let v = join(v, "\n")
 		endif
-		let v = substitute(v, "\n", '', 'g')
+		let v = substitute(v, "[\n\x08]", '', 'g')
 		let v = substitute(v, "\t", ' ', 'g')
-		let v = substitute(v, "\x08", '', 'g')
 		let v = substitute(v, " \+", ' ', 'g')
 
 		if a:echo
@@ -39,15 +38,28 @@ fun! lazy#list(echo) abort
 endfun
 
 " Insert text based on <cword>
-fun! lazy#insert_cword() abort
-	let snip = s:find_snip(expand('<cword>'))
-	if snip isnot# ''
-		call lazy#insert_text(snip)
+fun! lazy#insert_cword(from_insert) abort
+	try
+		let snip = s:find_snip(expand('<cword>'))
+	catch
+		if a:from_insert
+			echoerr v:exception
+		else
+			echohl Error | echom v:exception | echohl None
+		endif
+		return
+	endtry
+	if snip
+		return lazy#insert_text(snip)
 	endif
 
 	" Show list if there's no matches.
 	" TODO: better filtering.
 	let snips = lazy#list(0)
+	if snips is# 0
+		return
+	endif
+
 	let list = []
 	for [k, v] in items(snips)
 		call add(list, printf('%-10s %s', k, s:left(v, &columns - 25)))
@@ -112,7 +124,7 @@ endfun
 fun! s:find_snip(word) abort
 	let snips = copy(get(g:, 'lazy_snippets', ''))
 	if snips is# '' || len(snips) is 0
-		return s:error('no snippets defined (g:lazy_snippets is undefined or empty)')
+		throw 'lazy.vim: no snippets defined (g:lazy_snippets is undefined or empty)'
 	endif
 	for ft in split(&ft, '\.')
 		let snips = copy(get(g:lazy_snippets, ft, ''))
@@ -121,22 +133,9 @@ fun! s:find_snip(word) abort
 		endif
 	endfor
 	if snips is# '' || len(snips) is 0
-		return s:error('no snippets for this filetype (g:lazy_snippets[%s] is undefined or empty)', &ft)
+		throw printf('lazy.vim: no snippets for this filetype (g:lazy_snippets[%s] is undefined or empty)', &ft)
 	endif
-
 	return get(snips, a:word, '')
-endfun
-
-" TODO: this doesn't display from insert mode.
-fun! s:error(msg, ...) abort
-    let msg = a:msg
-    if len(a:000) > 0
-      let msg = call('printf', [a:msg] + a:000)
-    endif
-
-	echohl Error
-	echom 'lazy.vim: ' .. msg
-	echohl None
 endfun
 
 fun! s:left(str, maxlen) abort
