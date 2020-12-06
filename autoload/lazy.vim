@@ -6,6 +6,9 @@ let g:loaded_lazy = 1
 
 " List all snippets; if echo is 1 it's printed, or it's returned if it's 0.
 fun! lazy#list(echo) abort
+	if &ft is# ''
+		return
+	endif
 	let snips = copy(get(g:, 'lazy_snippets', ''))
 	if snips is# '' || len(snips) is 0
 		return
