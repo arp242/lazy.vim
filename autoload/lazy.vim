@@ -43,7 +43,8 @@ endfun
 " Insert text based on <cword>
 fun! lazy#insert_cword(from_insert) abort
 	try
-		let snip = s:find_snip(expand('<cword>'))
+		let snip = expand('<cword>')
+		let text = s:find_snip(snip)
 	catch
 		if a:from_insert
 			echoerr v:exception
@@ -52,8 +53,8 @@ fun! lazy#insert_cword(from_insert) abort
 		endif
 		return
 	endtry
-	if snip isnot# ''
-		return lazy#insert_text(snip)
+	if text isnot# ''
+		return lazy#insert_text(text)
 	endif
 
 	" Show list if there's no matches.
@@ -85,42 +86,56 @@ fun! lazy#insert_cword(from_insert) abort
 endfun
 
 fun! s:popup_cb(list, id, result) abort
+	if a:result == -1
+		return
+	endif
 	let snip = split(a:list[a:result - 1], ' ')[0]
-	let text = s:find_snip(snip)
-	call lazy#insert_text(text)
+	call lazy#insert_text(s:find_snip(snip))
 endfun
 
-" Insert the text from snip.
-fun! lazy#insert_text(snip) abort
-	let snip = a:snip
-	if type(a:snip) isnot v:t_list
-		let snip = split(a:snip, "\n")
+" Insert the text.
+fun! lazy#insert_text(text) abort
+	let text = a:text
+	if type(a:text) isnot v:t_list
+		let text = split(a:text, "\n")
 	endif
 
 	" Adjust indentation.
 	let indent = matchstr(getline('.'), '^\s*')
-	let snip = snip->map({_, v -> indent .. v})
+	let text = text->map({_, v -> indent .. v})
 
 	" Insert the snippet; replace the line if that's all on that.
-	if getline('.') =~ '^\s*' .. snip[0] .. '\s*$'
-		call setline('.', snip[0])
+	if getline('.') =~ '^\s*' .. text[0] .. '\s*$'
+		call setline('.', text[0])
 	else
 		" TODO: get line, substitute at correct position. Maybe be smart if
 		" what's typed already matches what we would insert?
-		call setline('.', snip[0])
+		call setline('.', text[0])
 	endif
-	if len(snip) > 1
-		call append('.', snip[1:])
+	if len(text) > 1
+		call append('.', text[1:])
 	endif
 
 	" Set cursor position to \b.
-	for line in snip
+	let i = 0
+	for line in text
 		let c = stridx(line, "\b")
 		if c > -1
+			if i > 0
+				exe 'normal! ' .. i .. 'j'
+			endif
 			exe "normal! f\b\"_x"
+			let i = -1
 			break
 		endif
+		let i += 1
 	endfor
+
+	" Move back cursor to where it was if there's no \b
+	" TODO: not ideal.
+	if i isnot -1
+		normal! ^
+	endif
 endfun
 
 " Find snippet text by shortcut.
